@@ -6,10 +6,11 @@ import org.example.userhandling.dto.CreateUserRequest;
 import org.example.userhandling.dto.UserDTO;
 import org.example.userhandling.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -22,25 +23,27 @@ public class UserController {
     }
 
     @GetMapping("/admin/users/get-all")
-    public ResponseEntity<List<UserDTO>> getAllUsers() {
-        return ResponseEntity.ok(this.userService.getAllUsers());
+    public ResponseEntity<List<UserDTO>> getAllUsers(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(this.userService.getAllUsers(jwt));
     }
 
     @PostMapping("/users/create-user")
-    public ResponseEntity<String> createUser(@RequestBody CreateUserRequest createUserRequest) {
-        String userId = userService.createUser(createUserRequest);
+    public ResponseEntity<String> createUser(@RequestBody CreateUserRequest createUserRequest,
+                                             @AuthenticationPrincipal Jwt jwt) {
+        String userId = userService.createUser(createUserRequest, jwt);
         return ResponseEntity.ok("User with id:" + userId + " created.");
     }
 
     @PostMapping("/admin/users/assign-role")
-    public ResponseEntity<String> assignRoleToUser(@RequestBody AssignUserRoleRequest assignUserRoleRequest) {
-        userService.assignUserRole(assignUserRoleRequest);
+    public ResponseEntity<String> assignRoleToUser(@RequestBody AssignUserRoleRequest assignUserRoleRequest,
+                                                   @AuthenticationPrincipal Jwt jwt) {
+        userService.assignUserRole(assignUserRoleRequest, jwt);
         return ResponseEntity.ok("Role assigned.");
     }
 
     @DeleteMapping("/admin/users/delete-user/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
-        userService.deleteUser(id);
+    public ResponseEntity<Void> deleteUser(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
+        userService.deleteUser(id, jwt);
         return ResponseEntity.noContent().build();
     }
 
