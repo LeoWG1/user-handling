@@ -6,9 +6,8 @@ import org.example.userhandling.dto.UserDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
@@ -32,28 +31,8 @@ public class UserService {
     @Value("${keycloak.client-id}")
     private String clientId;
 
-    @Value("${keycloak.client-secret}")
-    private String clientSecret;
-
-
-    public String getAccessToken() {
-        String tokenUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("grant_type", "client_credentials");
-        map.add("client_id", clientId);
-        map.add("client_secret", clientSecret);
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl,
-                new HttpEntity<>(map, headers), Map.class);
-        return (String) Objects.requireNonNull(response.getBody()).get("access_token");
-    }
-
-    public String getClientUuid(String clientId) {
-        String accessToken = getAccessToken();
+    public String getClientUuid(String clientId, Jwt jwt) {
+        String accessToken = jwt.getTokenValue();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -73,7 +52,9 @@ public class UserService {
         return null;
     }
 
-    private List<String> getUserClientRoles(String userId, String clientUuid, String accessToken) {
+    private List<String> getUserClientRoles(String userId, String clientUuid, Jwt jwt) {
+        String accessToken = jwt.getTokenValue();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         HttpEntity<Void> request = new HttpEntity<>(headers);
@@ -93,8 +74,8 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserDTO> getAllUsers() {
-        String accessToken = getAccessToken();
+    public List<UserDTO> getAllUsers(Jwt jwt) {
+        String accessToken = jwt.getTokenValue();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -110,12 +91,12 @@ public class UserService {
 
         List<Map<String, Object>> users = response.getBody();
 
-        String clientUuid = getClientUuid(clientId);
+        String clientUuid = getClientUuid(clientId, jwt);
 
         return Objects.requireNonNull(users).stream()
                 .map(user -> {
                     String userId = (String) user.get("id");
-                    List<String> userRoles = getUserClientRoles(userId, clientUuid, accessToken);
+                    List<String> userRoles = getUserClientRoles(userId, clientUuid, jwt);
                     return new UserDTO(
                             userId,
                             (String) user.get("username"),
@@ -130,8 +111,8 @@ public class UserService {
 
     }
 
-    public String createUser(CreateUserRequest createUserRequest) {
-        String accessToken = getAccessToken();
+    public String createUser(CreateUserRequest createUserRequest, Jwt jwt) {
+        String accessToken = jwt.getTokenValue();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -164,8 +145,8 @@ public class UserService {
         return parts[parts.length - 1];
     }
 
-    public void assignUserRole(AssignUserRoleRequest userRoleRequest) {
-        String accessToken = getAccessToken();
+    public void assignUserRole(AssignUserRoleRequest userRoleRequest, Jwt jwt) {
+        String accessToken = jwt.getTokenValue();
 
         String url = String.format(
                 "%s/admin/realms/%s/users/%s/role-mappings/clients/%s",
@@ -188,8 +169,8 @@ public class UserService {
 
     }
 
-    public void deleteUser(String userId){
-        String accessToken = getAccessToken();
+    public void deleteUser(String userId, Jwt jwt){
+        String accessToken = jwt.getTokenValue();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
