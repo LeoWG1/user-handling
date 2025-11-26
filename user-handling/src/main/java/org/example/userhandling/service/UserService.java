@@ -3,6 +3,7 @@ package org.example.userhandling.service;
 import org.example.userhandling.dto.AssignUserRoleRequest;
 import org.example.userhandling.dto.CreateUserRequest;
 import org.example.userhandling.dto.UserDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -19,17 +20,23 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+    private final RestTemplate restTemplate;
+    private final String keycloakUrl;
+    private final String realm;
+    private final String clientId;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    public UserService(
+            RestTemplate restTemplate,
+            @Value("${keycloak.server-url}") String keycloakUrl,
+            @Value("${keycloak.realm}") String realm,
+            @Value("${keycloak.client-id}") String clientId) {
+        this.restTemplate = restTemplate;
+        this.keycloakUrl = keycloakUrl;
+        this.realm = realm;
+        this.clientId = clientId;
 
-    @Value("${keycloak.server-url}")
-    private String keycloakUrl;
-
-    @Value("${keycloak.realm}")
-    private String realm;
-
-    @Value("${keycloak.client-id}")
-    private String clientId;
+    }
 
     public String getClientUuid(String clientId, Jwt jwt) {
         String accessToken = jwt.getTokenValue();
